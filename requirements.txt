@@ -1,4 +1,5 @@
-requests
-pandas
 streamlit
+streamlit-autorefresh
+pandas
+requests
 plotly

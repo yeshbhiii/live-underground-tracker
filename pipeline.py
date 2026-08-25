@@ -1,92 +1,64 @@
 import requests
 import pandas as pd
 
-from config import API_URL
+from config import BASE_URL
 
 
-def fetch_data():
-    """
-    Fetch live arrival data from the TfL API.
-    Returns a list of dictionaries containing train arrivals.
-    """
+def fetch_data(station_id):
+
+    url = f"{BASE_URL}/{station_id}/Arrivals"
 
     try:
-        # Send GET request to the API
-        response = requests.get(API_URL)
 
-        # Raise an error if the request failed
+        response = requests.get(url)
         response.raise_for_status()
 
-        # Convert JSON response into Python objects
-        data = response.json()
-
-        return data
+        return response.json()
 
     except requests.exceptions.RequestException as error:
-        print("Error connecting to the TfL API.")
+
         print(error)
 
         return []
 
 
 def clean_data(data):
-    """
-    Extract only the information we need from the API response.
-    Returns a Pandas DataFrame.
-    """
 
     arrivals = []
 
     for train in data:
 
-        line = train.get("lineName", "Unknown")
-
-        destination = train.get("destinationName", "Unknown")
-
-        minutes_away = round(train.get("timeToStation", 0) / 60)
-
-        expected_arrival = train.get("expectedArrival", "Unknown")
-
         arrivals.append({
-            "Line": line,
-            "Destination": destination,
-            "Minutes_Away": minutes_away,
-            "Expected_Arrival": expected_arrival
+
+            "Line": train.get("lineName", "Unknown"),
+
+            "Destination": train.get("destinationName", "Unknown"),
+
+            "Minutes_Away": round(
+                train.get("timeToStation", 0) / 60
+            ),
+
+            "Expected_Arrival": train.get(
+                "expectedArrival",
+                "Unknown"
+            )
+
         })
 
-    dataframe = pd.DataFrame(arrivals)
+    df = pd.DataFrame(arrivals)
 
-    # Sort by the train arriving soonest
-    dataframe = dataframe.sort_values("Minutes_Away")
+    df = df.sort_values(
+        "Minutes_Away"
+    ).reset_index(drop=True)
 
-    # Reset row numbers after sorting
-    dataframe = dataframe.reset_index(drop=True)
+    return df
 
-    return dataframe
 
-def get_arrivals():
-    """
-    Returns a cleaned DataFrame containing live arrivals.
-    """
+def get_arrivals(station_id):
 
-    raw_data = fetch_data()
+    data = fetch_data(station_id)
 
-    if len(raw_data) == 0:
+    if len(data) == 0:
         return pd.DataFrame()
 
-    dataframe = clean_data(raw_data)
-
-    return dataframe
-
-def main():
-
-    dataframe = get_arrivals()
-
-    if dataframe.empty:
-        print("No data received.")
-    else:
-        print(dataframe)
-
-
-if __name__ == "__main__":
-    main()
+    return clean_data(data)
